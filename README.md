@@ -128,15 +128,15 @@ terraform state mv <src> <dest>   # Move resource in state
 terraform state rm <resource>     # Remove from state (not from cloud)
 ```
 
-**Remote Backend (S3 + DynamoDB for locking)**
+**Remote Backend (S3)**
 ```hcl
 terraform {
   backend "s3" {
     bucket         = "my-terraform-state"
     key            = "global/s3/terraform.tfstate"
     region         = "us-east-1"
-    dynamodb_table = "terraform-lock"
     encrypt        = true
+    use_lockfile   = true
   }
 }
 ```
