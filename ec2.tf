@@ -65,7 +65,7 @@ resource aws_instance my_instance {
 	count = 3
 	ami = "ami-0d76b909de1a0595d" # OS AMI ID
 
-	instance_type = "t3.micro" # Instance type (free tier)
+	instance_type = "t3.micro" # Instance type
 
 	key_name = aws_key_pair.my_key_pair.key_name	# Key pair
 
