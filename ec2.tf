@@ -1,39 +1,37 @@
+terraform {
+  required_version = ">= 1.5.0"
+
+  required_providers {
+    aws = {
+      source  = "hashicorp/aws"
+      version = "~> 6.0"
+    }
+  }
+}
+
 # Region
-
 provider "aws" {
-
-	region="us-west-2"
-
+  region = "us-west-2"
 }
 
-# Key Value pair
-
-resource aws_key_pair my_key_pair {
-
-key_name="terra-automate-key-josh"
-public_key=file("terra-automate-key.pub")
-} 
-
-# VPC Default
-
-resource aws_default_vpc default {
+# Key Pair
+resource "aws_key_pair" "my_key_pair" {
+  key_name   = "terra-automate-key-josh"
+  public_key = file("${path.module}/terra-automate-key.pub")
 }
 
-# Security Group 
+# Default VPC
+resource "aws_default_vpc" "default" {}
 
-resource aws_security_group my_security_group {
-
-name="terra-security-group"
-vpc_id= aws_default_vpc.default.id  # interpolation
-description = "this is Inbound and outbound rules for your instance Security group"
-
+# Security Group
+resource "aws_security_group" "my_security_group" {
+  name        = "terra-security-group"
+  vpc_id      = aws_default_vpc.default.id # interpolation
+  description = "Inbound and outbound rules for the instance security group"
 }
 
-# Inbound & Outbount port rules
-
-
-
-resource aws_vpc_security_group_ingress_rule allow_http {
+# Inbound & Outbound rules
+resource "aws_vpc_security_group_ingress_rule" "allow_http" {
   security_group_id = aws_security_group.my_security_group.id
   cidr_ipv4         = "0.0.0.0/0"
   from_port         = 80
@@ -41,7 +39,7 @@ resource aws_vpc_security_group_ingress_rule allow_http {
   to_port           = 80
 }
 
-resource aws_vpc_security_group_ingress_rule allow_ssh {
+resource "aws_vpc_security_group_ingress_rule" "allow_ssh" {
   security_group_id = aws_security_group.my_security_group.id
   cidr_ipv4         = "0.0.0.0/0"
   from_port         = 22
@@ -49,35 +47,28 @@ resource aws_vpc_security_group_ingress_rule allow_ssh {
   to_port           = 22
 }
 
-
-resource aws_vpc_security_group_egress_rule allow_all_traffic {
+resource "aws_vpc_security_group_egress_rule" "allow_all_traffic" {
   security_group_id = aws_security_group.my_security_group.id
   cidr_ipv4         = "0.0.0.0/0"
-  ip_protocol       = "-1" # semantically equivalent to all ports
+  ip_protocol       = "-1" # all protocols and ports
 }
 
+# EC2 Instances
+resource "aws_instance" "my_instance" {
+  count = 3
 
-# EC2 instance
+  ami           = "ami-0d76b909de1a0595d" # verify this exists in us-west-2
+  instance_type = "t3.micro"
 
+  key_name               = aws_key_pair.my_key_pair.key_name
+  vpc_security_group_ids = [aws_security_group.my_security_group.id]
 
-resource aws_instance my_instance {
+  root_block_device {
+    volume_size = 10
+    volume_type = "gp3"
+  }
 
-	count = 3
-	ami = "ami-0d76b909de1a0595d" # OS AMI ID
-
-	instance_type = "t3.micro" # Instance Type
-
-	key_name = aws_key_pair.my_key_pair.key_name	# Key pair
-
-	vpc_security_group_ids = [aws_security_group.my_security_group.id] # VPC & Security Group
-	
-	# root storage (EBS)
-	root_block_device {
-		volume_size = 10
-		volume_type = "gp3"
-	}
-
-	tags = {
-    Name = "terra-automate-server"
+  tags = {
+    Name = "terra-automate-server-${count.index}"
   }
 }
